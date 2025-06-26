@@ -20,3 +20,13 @@ docs/environments/*.md
 !docs/environments/index.md
 
 venv
+venv_py310
+
+video
+*.mp4
+*.avi
+*.mov
+*.gif
+*.png
+*.jpg
+*.jpeg
