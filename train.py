@@ -20,10 +20,10 @@ class TrainingConfig:
     total_timesteps: int = 10000000
     learning_rate: float = 0.0001
     buffer_size: int = 1000000
-    gamma: float = 0.99
+    gamma: float = 0.8
     tau: float = 1
     target_network_frequency: int = 1000
-    batch_size: int = 32
+    batch_size: int = 64
     start_e: float = 1
     end_e: float = 0.01
     exploration_fraction: float = 0.1
@@ -39,7 +39,8 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     return max(slope * t + start_e, end_e)
 
 def main():
-    config = TrainingConfig(total_timesteps=100000, target_network_frequency=500, learning_starts=50000, buffer_size=50000)
+    config = TrainingConfig(total_timesteps=1000000, target_network_frequency=500, learning_starts=5000, buffer_size=50000)
+    # config = TrainingConfig()
     env = make_env()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -48,6 +49,9 @@ def main():
     torch.manual_seed(config.seed)
     np.random.seed(config.seed)
     random.seed(config.seed)
+
+    red_network = QNetwork(env.observation_space("red_0").shape, env.action_space("red_0").n)
+    red_network.load_state_dict(torch.load("red.pt", weights_only=True, map_location="cpu"))
 
     q_network = QNetwork(env.observation_space("red_0").shape, env.action_space("red_0").n).to(device)
     target_network = QNetwork(env.observation_space("red_0").shape, env.action_space("red_0").n).to(device)
@@ -85,7 +89,12 @@ def main():
             else:
                 agent_handle = agent.split("_")[0]
                 if agent_handle == "red":
-                    action = env.action_space(agent).sample()
+                    observation = (
+                    torch.Tensor(observation).float().permute([2, 0, 1]).unsqueeze(0)
+                    )
+                    with torch.no_grad():
+                        q_values = red_network(observation)
+                    action = torch.argmax(q_values, dim=1).numpy()[0]
                 else:
                     if random.random() < epsilon:
                         action = env.action_space(agent).sample()
@@ -122,7 +131,7 @@ def main():
                 actions = actions.view(-1)
                 old_val = q_vals_current.gather(1, actions.unsqueeze(1)).squeeze(1)
                 loss = nn.functional.mse_loss(old_val, td_target)
-                if global_step % 1000 == 0:
+                if global_step % 100000 == 0:
                     print(f"Step {global_step}, Loss: {loss.item()}, Epsilon: {epsilon:.4f}, Q-Value: {old_val.mean().item()}")
                 optimizer.zero_grad()
                 loss.backward()

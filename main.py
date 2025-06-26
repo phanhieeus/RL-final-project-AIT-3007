@@ -50,6 +50,12 @@ if __name__ == "__main__":
     q_network.load_state_dict(
         torch.load("red.pt", weights_only=True, map_location="cpu")
     )
+    blue_networks = QNetwork(
+        env.observation_space("blue_0").shape, env.action_space("blue_0").n
+    )
+    blue_networks.load_state_dict(
+        torch.load("final_model.pt", weights_only=True, map_location="cpu")
+    )
     for agent in env.agent_iter():
 
         observation, reward, termination, truncation, info = env.last()
@@ -65,8 +71,14 @@ if __name__ == "__main__":
                 with torch.no_grad():
                     q_values = q_network(observation)
                 action = torch.argmax(q_values, dim=1).numpy()[0]
+                # action = env.action_space(agent).sample()
             else:
-                action = env.action_space(agent).sample()
+                observation = (
+                    torch.Tensor(observation).float().permute([2, 0, 1]).unsqueeze(0)
+                )
+                with torch.no_grad():
+                    q_values = blue_networks(observation)
+                action = torch.argmax(q_values, dim=1).numpy()[0]
 
         env.step(action)
 
@@ -75,7 +87,7 @@ if __name__ == "__main__":
 
     height, width, _ = frames[0].shape
     out = cv2.VideoWriter(
-        os.path.join(vid_dir, f"pretrained.mp4"),
+        os.path.join(vid_dir, f"red_vs_blue.mp4"),
         cv2.VideoWriter_fourcc(*"mp4v"),
         fps,
         (width, height),
