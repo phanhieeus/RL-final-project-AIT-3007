@@ -2,6 +2,8 @@ from magent2.environments import battle_v4
 import os
 import cv2
 
+from torch_model import QNetwork
+import torch
 
 if __name__ == "__main__":
     env = battle_v4.env(map_size=45, render_mode="rgb_array")
@@ -11,6 +13,12 @@ if __name__ == "__main__":
     frames = []
 
     # random policies
+    blue_networks = QNetwork(
+        env.observation_space("blue_0").shape, env.action_space("blue_0").n
+    )
+    blue_networks.load_state_dict(
+        torch.load("final_model.pt", weights_only=True, map_location="cpu")
+    )
     env.reset()
     for agent in env.agent_iter():
         observation, reward, termination, truncation, info = env.last()
@@ -18,7 +26,16 @@ if __name__ == "__main__":
         if termination or truncation:
             action = None  # this agent has died
         else:
-            action = env.action_space(agent).sample()
+            agent_handle = agent.split("_")[0]
+            if agent_handle == "red":
+                action = env.action_space(agent).sample()
+            else:
+                observation = (
+                    torch.Tensor(observation).float().permute([2, 0, 1]).unsqueeze(0)
+                )
+                with torch.no_grad():
+                    q_values = blue_networks(observation)
+                action = torch.argmax(q_values, dim=1).numpy()[0]
 
         env.step(action)
 
@@ -41,8 +58,6 @@ if __name__ == "__main__":
     # pretrained policies
     frames = []
     env.reset()
-    from torch_model import QNetwork
-    import torch
 
     q_network = QNetwork(
         env.observation_space("red_0").shape, env.action_space("red_0").n
@@ -50,12 +65,7 @@ if __name__ == "__main__":
     q_network.load_state_dict(
         torch.load("red.pt", weights_only=True, map_location="cpu")
     )
-    blue_networks = QNetwork(
-        env.observation_space("blue_0").shape, env.action_space("blue_0").n
-    )
-    blue_networks.load_state_dict(
-        torch.load("final_model.pt", weights_only=True, map_location="cpu")
-    )
+    
     for agent in env.agent_iter():
 
         observation, reward, termination, truncation, info = env.last()

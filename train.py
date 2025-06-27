@@ -23,10 +23,10 @@ class TrainingConfig:
     gamma: float = 0.8
     tau: float = 1
     target_network_frequency: int = 1000
-    batch_size: int = 64
+    batch_size: int = 32
     start_e: float = 1
     end_e: float = 0.01
-    exploration_fraction: float = 0.1
+    exploration_fraction: float = 0.2
     learning_starts: int = 80000
     train_frequency: int = 4
 
@@ -39,8 +39,7 @@ def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     return max(slope * t + start_e, end_e)
 
 def main():
-    config = TrainingConfig(total_timesteps=1000000, target_network_frequency=500, learning_starts=5000, buffer_size=50000)
-    # config = TrainingConfig()
+    config = TrainingConfig()
     env = make_env()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -89,12 +88,13 @@ def main():
             else:
                 agent_handle = agent.split("_")[0]
                 if agent_handle == "red":
-                    observation = (
-                    torch.Tensor(observation).float().permute([2, 0, 1]).unsqueeze(0)
-                    )
-                    with torch.no_grad():
-                        q_values = red_network(observation)
-                    action = torch.argmax(q_values, dim=1).numpy()[0]
+                    # observation = (
+                    # torch.Tensor(observation).float().permute([2, 0, 1]).unsqueeze(0)
+                    # )
+                    # with torch.no_grad():
+                    #     q_values = red_network(observation)
+                    # action = torch.argmax(q_values, dim=1).numpy()[0]
+                    action = env.action_space(agent).sample()  # Use random action for red agent
                 else:
                     if random.random() < epsilon:
                         action = env.action_space(agent).sample()

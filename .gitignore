@@ -30,3 +30,7 @@ video
 *.png
 *.jpg
 *.jpeg
+
+.vscode
+
+*.pt
