@@ -17,17 +17,17 @@ class TrainingConfig:
     save_model: bool = True
     save_nums: int = 5
     
-    total_timesteps: int = 10000000
+    total_timesteps: int = 1000
     learning_rate: float = 0.0001
-    buffer_size: int = 10000000
+    buffer_size: int = 50000
     gamma: float = 0.8
     tau: float = 1
-    target_network_frequency: int = 1000
+    target_network_frequency: int = 10
     batch_size: int = 32
     start_e: float = 1
     end_e: float = 0.01
     exploration_fraction: float = 0.5
-    learning_starts: int = 80000
+    learning_starts: int = 80
     train_frequency: int = 4
 
 def make_env():
@@ -102,7 +102,7 @@ def main():
                         observation_tensor = torch.Tensor(observation).float().permute([2, 0, 1]).unsqueeze(0).to(device)
                         with torch.no_grad():
                             q_values = q_network(observation_tensor)
-                        action = torch.argmax(q_values, dim=1).numpy()[0]
+                        action = torch.argmax(q_values, dim=1).cpu().numpy()[0]
                     if (track_data[agent]["observation"] is not None and
                         track_data[agent]["action"] is not None and
                         track_data[agent]["done"] is not None):
@@ -118,6 +118,10 @@ def main():
                     track_data[agent]["action"] = action
                     track_data[agent]["done"] = 0
             env.step(action)
+        if len(env.agents) == 0:
+            env.reset()
+            track_data = {f"blue_{i}": {"observation": None, "action": None, "done": None} for i in range(81)}
+
         if global_step >= config.learning_starts:
             if global_step % config.train_frequency == 0:
                 data = replay_buffer.sample(config.batch_size)

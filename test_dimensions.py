@@ -44,7 +44,8 @@ red_network.load_state_dict(torch.load("red.pt", weights_only=True, map_location
 
 track_data = {f"blue_{i}": {"observation": None, "action": None, "done": None} for i in range(81)}
 
-for global_step in range(1000):
+for global_step in range(200):
+    count_action = 0
     for agent in env.agent_iter():
         observation, reward, termination, truncation, info = env.last()
 
@@ -96,10 +97,15 @@ for global_step in range(1000):
                 track_data[agent]["action"] = action
                 track_data[agent]["done"] = 0
         env.step(action)
+        count_action += 1
+    if (len(env.agents) == 0):
+        env.reset()
+        print("All agents have died, resetting environment at step:", global_step)
+        print(f"Num action of current step: {count_action}")
 
 print(f"Buffer size: {replay_buffer.size()}")
 batch = replay_buffer.sample(1000)
-print(batch[0].shape, batch[1].shape, batch[2].shape, batch[3].shape, batch[4].shape)
-print("Sampled batch:")
-for arr in batch[4]:
-    print(arr.item(), end=" ")
+# print(batch[0].shape, batch[1].shape, batch[2].shape, batch[3].shape, batch[4].shape)
+# print("Sampled batch:")
+# for arr in batch[4]:
+#     print(arr.item(), end=" ")
