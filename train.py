@@ -19,14 +19,14 @@ class TrainingConfig:
     
     total_timesteps: int = 10000000
     learning_rate: float = 0.0001
-    buffer_size: int = 1000000
+    buffer_size: int = 10000000
     gamma: float = 0.8
     tau: float = 1
     target_network_frequency: int = 1000
     batch_size: int = 32
     start_e: float = 1
     end_e: float = 0.01
-    exploration_fraction: float = 0.2
+    exploration_fraction: float = 0.5
     learning_starts: int = 80000
     train_frequency: int = 4
 
